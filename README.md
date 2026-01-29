@@ -1,4 +1,12 @@
+<div align="center">
+  
 # Pastebin-Lite
+
+</div>
+
+
+<img width="1590" height="988" alt="image" src="https://github.com/user-attachments/assets/a235c6fe-1167-4926-a821-82c7f59dd0d5" />
+
 
 A lightweight Pastebin-style web application that allows users to create text pastes and share them via a unique URL. Pastes can optionally expire based on time-to-live (TTL) and/or a maximum view count. Once any configured constraint is exceeded, the paste becomes unavailable.
 
