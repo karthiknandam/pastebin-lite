@@ -29,6 +29,8 @@ import * as z from "zod";
 import { postPaste } from "@/app/utils/api";
 import { toast } from "sonner";
 import { useUrlStore } from "@/app/utils/store";
+import { useState } from "react";
+import { Spinner } from "./ui/spinner";
 
 const ttlTime = [
   { label: "Never", value: 0 },
@@ -67,28 +69,38 @@ export function Form() {
     },
   });
 
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
   const { setUrl } = useUrlStore();
   const content = watch("content");
 
   const onSubmit = async (data: FormValues) => {
-    const res = await postPaste(data);
-    if (!res.success) {
-      toast.error(`Error : ${res.error}`);
-      return;
-    }
+    try {
+      setSubmitting(true);
+      const res = await postPaste(data);
+      if (!res.success) {
+        toast.error(`Error : ${res.error}`);
+        return;
+      }
 
-    if (!res) {
-      toast.error("Unknown Error occur please try again later");
-      return;
+      if (!res) {
+        toast.error("Unknown Error occur please try again later");
+        return;
+      }
+      toast.success("Created");
+      setUrl({ url: res?.url, id: res?.id });
+      reset();
+    } catch (error) {
+      toast.error("Unknown Error occured");
+    } finally {
+      setSubmitting(false);
     }
-    setUrl({ url: res?.url, id: res?.id });
-    reset();
   };
 
   return (
     <Card className="w-full border-border">
       <CardContent>
-        <form id="bug-report-form" onSubmit={handleSubmit(onSubmit)}>
+        <form id="pastebin-form" onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
             {/* paste box */}
             <Field data-invalid={!!errors.content}>
@@ -180,11 +192,22 @@ export function Form() {
 
       <CardFooter>
         <Field orientation="horizontal">
-          <Button type="button" variant="outline" onClick={() => reset()}>
+          <Button
+            type="button"
+            variant="outline"
+            className="cursor-pointer"
+            onClick={() => reset()}
+            disabled={submitting}
+          >
             Reset
           </Button>
-          <Button type="submit" form="bug-report-form">
-            Submit
+          <Button
+            type="submit"
+            className="cursor-pointer"
+            form="pastebin-form"
+            disabled={submitting}
+          >
+            {submitting ? <Spinner /> : "Submit"}
           </Button>
         </Field>
       </CardFooter>
