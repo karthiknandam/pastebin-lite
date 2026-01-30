@@ -30,7 +30,7 @@ export async function GET(
 
     let res = {
       content: data.value,
-      remining_view: data?.max_views || null,
+      remaining_views: data?.max_views || null,
       expires_at: data?.ttl,
     };
 
