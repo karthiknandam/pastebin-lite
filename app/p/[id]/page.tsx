@@ -24,9 +24,9 @@ const Page = async ({ params }: { params: { id: string } }) => {
             <pre>{data?.data?.content}</pre>
           </div>
           <div className="text-white text-xs mt-20 flex flex-col gap-2">
-            <div>Expires at : {data?.data?.expires_at}</div>
+            <div>Expiration: {data?.data?.expires_at ?? "No expiry"}</div>
             <div>
-              Max Views Left : {data?.data?.remining_view || "Infinity or Zero"}
+              Remaining views: {data?.data?.remaining_views ?? "No limit"}
             </div>
           </div>
         </>
