@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 async function getData(id: string) {
   const res = await fetch(
@@ -10,10 +11,14 @@ async function getData(id: string) {
   return res.json();
 }
 
-const Page = async ({ params }: { params: { id: string } }) => {
-  const param = await params;
+const Page = async ({ params }: { params: Promise<{ id: string }> }) => {
+  const { id } = await params;
 
-  const data = await getData(param.id);
+  if (!id) {
+    redirect("/");
+  }
+
+  const data = await getData(id);
 
   return (
     <div className="w-screen h-full text-white p-10 overflow-scroll">
