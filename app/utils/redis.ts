@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { json } from "zod";
 
 declare global {
   var __redisClient: Redis | undefined;
@@ -28,64 +29,55 @@ export function getRedisClient(): Redis {
 
 export type CacheValue = {
   value: string;
-  max_views?: number;
+  max_views?: number | null;
   created_at: string;
-  ttl?: string | null;
+  expires_at?: number | null;
 };
 
 class RedisService {
   private redis = getRedisClient();
-
   async set(
     key: string,
     value: string,
     options?: { ttl_seconds?: number; max_views?: number },
   ): Promise<{ existed: boolean }> {
-    const payload: CacheValue = {
-      value,
-      max_views: options?.max_views,
-      created_at: new Date().toISOString(),
-    };
+    const expiresAt = options?.ttl_seconds
+      ? Date.now() + options.ttl_seconds * 1000
+      : null;
 
-    const data = JSON.stringify(payload);
+    const existingValue = await this.redis.hget(key, "value");
 
-    const created = options?.ttl_seconds
-      ? await this.redis.call("SET", key, data, "NX", "EX", options.ttl_seconds)
-      : await this.redis.call("SET", key, data, "NX");
+    if (existingValue === null) {
+      await this.redis.hset(key, {
+        value,
+        max_views: options?.max_views ?? "",
+        expires_at: expiresAt ?? "",
+        created_at: new Date().toISOString(),
+      });
 
-    return { existed: created !== "OK" };
-  }
-
-  async get(key: string): Promise<CacheValue | null> {
-    const data = await this.redis.get(key);
-    if (!data) return null;
-
-    let parsed: CacheValue;
-    try {
-      parsed = JSON.parse(data);
-    } catch {
-      await this.redis.del(key);
-      return null;
-    }
-
-    const ttl = await this.redis.ttl(key);
-    parsed.ttl =
-      ttl > 0 ? new Date(Date.now() + ttl * 1000).toISOString() : null;
-
-    if (typeof parsed.max_views === "number") {
-      parsed.max_views -= 1;
-      if (parsed.max_views <= 0) {
-        await this.redis.del(key);
-      } else {
-        await this.redis.set(key, JSON.stringify(parsed));
+      if (options?.ttl_seconds) {
+        await this.redis.expire(key, options.ttl_seconds);
       }
-    }
 
-    return parsed;
+      return { existed: false };
+    }
+    return { existed: true };
   }
 
-  del(key: string) {
-    return this.redis.del(key);
+  // we need to verify this only for touching purpose
+
+  async get(key: string): Promise<Record<string, string> | null> {
+    const data = await this.redis.hgetall(key);
+    return data;
+  }
+
+  async update(key: string): Promise<number> {
+    const remaining = await this.redis.hincrby(key, "max_views", -1);
+    return remaining;
+  }
+
+  async del(key: string) {
+    await this.redis.del(key);
   }
   async ping() {
     return this.redis.ping();
